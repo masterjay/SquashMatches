@@ -1,12 +1,6 @@
 <template>
   <div class="app-container">
-    <!-- 載入中 -->
-    <div v-if="loading" class="loading-screen">
-      <div class="loading-content">
-        <div class="spinner"></div>
-        <p class="loading-text">載入中...</p>
-      </div>
-    </div>
+    <LoadingScreen v-if="loading" />
 
     <!-- 一般使用者模式 -->
     <div v-else-if="!isLoggedIn" class="main-container">
@@ -247,6 +241,7 @@
 <script setup>
 import { ref, reactive, nextTick, onMounted, onUnmounted } from 'vue';
 import Swal from 'sweetalert2';
+import LoadingScreen from './components/LoadingScreen.vue'
 
 // Firebase imports
 import { initializeApp } from 'firebase/app';
@@ -633,37 +628,9 @@ body {
   padding: 1rem;
 }
 
-/* 載入畫面 */
-.loading-screen {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
 
-.loading-content {
-  text-align: center;
-}
 
-.spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 1rem;
-}
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  color: white;
-  font-size: 1.125rem;
-  font-weight: 500;
-}
 
 /* 主容器 */
 .main-container {
