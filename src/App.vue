@@ -3,69 +3,13 @@
     <LoadingScreen v-if="loading" />
 
     <!-- 一般使用者模式 -->
-    <div v-else-if="!isLoggedIn" class="main-container">
-      <!-- 標題區 -->
-      <div class="header-container">
-        <h1 class="main-title">{{ mainTitle }}</h1>
-        <!-- 管理員登入按鈕 -->
-        <button @click="showLoginDialog" class="admin-login-button" title="管理員登入">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-        </button>
-      </div>
-
-      <!-- 場次表格 -->
-      <div class="matches-table-container">
-        <table class="matches-table">
-          <thead>
-          <tr>
-            <th class="table-header-label">場<br>地</th>
-            <th v-for="courtId in ['A', 'B', 'C', 'D']" :key="courtId"
-                class="table-header-court">
-              {{ courts[courtId].title }}
-            </th>
-          </tr>
-          </thead>
-          <tbody>
-          <!-- 目前場次 -->
-          <tr class="table-row match-0-row">
-            <td class="table-cell-label match-0-label">目<br>前</td>
-            <td v-for="courtId in ['A', 'B', 'C', 'D']" :key="`match-0-${courtId}`"
-                class="table-cell-match match-0-cell">
-              <span v-if="courts[courtId].matches && courts[courtId].matches[0]">
-                {{ courts[courtId].matches[0] }}
-              </span>
-              <span v-else class="match-empty-cell">-</span>
-            </td>
-          </tr>
-          <!-- 下一場次 -->
-          <tr class="table-row match-1-row">
-            <td class="table-cell-label match-1-label">下<br>一<br>場</td>
-            <td v-for="courtId in ['A', 'B', 'C', 'D']" :key="`match-1-${courtId}`"
-                class="table-cell-match match-1-cell">
-              <span v-if="courts[courtId].matches && courts[courtId].matches[1]">
-                {{ courts[courtId].matches[1] }}
-              </span>
-              <span v-else class="match-empty-cell">-</span>
-            </td>
-          </tr>
-          <!-- 下下場次 -->
-          <tr class="table-row match-2-row">
-            <td class="table-cell-label match-2-label">下<br>下<br>場</td>
-            <td v-for="courtId in ['A', 'B', 'C', 'D']" :key="`match-2-${courtId}`"
-                class="table-cell-match match-2-cell">
-              <span v-if="courts[courtId].matches && courts[courtId].matches[2]">
-                {{ courts[courtId].matches[2] }}
-              </span>
-              <span v-else class="match-empty-cell">-</span>
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <UserMode
+      v-else-if="!isLoggedIn"
+      class="main-container"
+      :mainTitle="mainTitle"
+      :courts="courts"
+      @login="showLoginDialog"
+    />
 
     <!-- 管理員模式 -->
     <div v-else class="main-container">
@@ -92,13 +36,15 @@
           <button @click="startEditMainTitle" class="btn-edit-main">✎</button>
         </div>
 
-        <button @click="handleLogout" class="logout-button">
-          登出
-        </button>
+        <button @click="handleLogout" class="logout-button">登出</button>
       </div>
 
       <!-- 場地列表 -->
-      <div v-for="courtId in ['A', 'B', 'C', 'D']" :key="courtId" class="court-card admin-court">
+      <div
+        v-for="courtId in ['A', 'B', 'C', 'D']"
+        :key="courtId"
+        class="court-card admin-court"
+      >
         <!-- 標題編輯 -->
         <div class="court-header">
           <div v-if="editingTitle === courtId" class="title-edit-container">
@@ -129,7 +75,7 @@
           >
             <div class="match-row">
               <div class="match-label">
-                {{ ['目前場次', '下一場次', '下下場次'][index] }}
+                {{ ["目前場次", "下一場次", "下下場次"][index] }}
               </div>
               <!-- 編輯中顯示輸入框 -->
               <input
@@ -146,7 +92,11 @@
               />
               <!-- 顯示場次號碼,可點擊編輯 -->
               <div
-                v-else-if="courts[courtId].matches && courts[courtId].matches[index] && courts[courtId].matches[index] !== ''"
+                v-else-if="
+                  courts[courtId].matches &&
+                  courts[courtId].matches[index] &&
+                  courts[courtId].matches[index] !== ''
+                "
                 :class="['match-number', `match-number-${index}`, 'editable']"
                 @click="startEditMatch(courtId, index)"
               >
@@ -182,7 +132,7 @@
           >
             <div class="match-row">
               <!-- 透明的標籤佔位,保持格式對齊 -->
-              <div class="match-label" style="opacity: 0;">額外場次</div>
+              <div class="match-label" style="opacity: 0">額外場次</div>
 
               <!-- 編輯中顯示輸入框 -->
               <input
@@ -206,16 +156,23 @@
                 {{ match }}
               </div>
               <!-- 空場次顯示為空 -->
-              <div v-else class="match-number" style="opacity: 0.3;">-</div>
+              <div v-else class="match-number" style="opacity: 0.3">-</div>
             </div>
 
             <div class="match-actions">
-              <button @click="removeMatch(courtId, idx + 3)" class="btn-remove">−</button>
+              <button @click="removeMatch(courtId, idx + 3)" class="btn-remove">
+                −
+              </button>
             </div>
           </div>
 
           <!-- 最下方的 [+] 按鈕 -->
-          <div v-if="courts[courtId].matches && courts[courtId].matches.length >= 3" class="add-more-container">
+          <div
+            v-if="
+              courts[courtId].matches && courts[courtId].matches.length >= 3
+            "
+            class="add-more-container"
+          >
             <button @click="addMatch(courtId)" class="btn-add-more">
               + 新增場次
             </button>
@@ -229,7 +186,10 @@
         <ul class="help-list">
           <li>• <strong>編輯場地標題</strong>：點擊場地名稱旁的編輯按鈕</li>
           <li>• <strong>新增場次</strong>：點擊 [+] 按鈕（場次會依序填入）</li>
-          <li>• <strong>刪除場次</strong>：點擊 [−] 按鈕（需要確認，後續場次會自動遞補）</li>
+          <li>
+            • <strong>刪除場次</strong>：點擊 [−]
+            按鈕（需要確認，後續場次會自動遞補）
+          </li>
           <li>• <strong>即時同步</strong>：所有觀看者會立即看到你的更新</li>
           <li>• <strong>場地顯示</strong>：觀看者只會看到有場次的場地</li>
         </ul>
@@ -239,162 +199,174 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, onMounted, onUnmounted } from 'vue';
-import Swal from 'sweetalert2';
-import LoadingScreen from './components/LoadingScreen.vue'
+import { ref, reactive, nextTick, onMounted, onUnmounted } from "vue";
+import Swal from "sweetalert2";
+import LoadingScreen from "./components/LoadingScreen.vue";
+import UserMode from "./components/UserMode.vue";
 
 // Firebase imports
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref as dbRef, set, onValue, off } from 'firebase/database';
+import { initializeApp } from "firebase/app";
+import {
+  getDatabase,
+  ref as dbRef,
+  set,
+  onValue,
+  off,
+} from "firebase/database";
 
 // Firebase 設定（請替換成你自己的設定）
 const firebaseConfig = {
   apiKey: "AIzaSyDVI-FBnE2ATejjfeN4Iz7LLbPlIr8p_x4",
   authDomain: "squashmatches.firebaseapp.com",
-  databaseURL: "https://squashmatches-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://squashmatches-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "squashmatches",
   storageBucket: "squashmatches.firebasestorage.app",
   messagingSenderId: "386779753475",
-  appId: "1:386779753475:web:f57b1c4c2a4ab266e97236"
+  appId: "1:386779753475:web:f57b1c4c2a4ab266e97236",
 };
 
 // 初始化 Firebase
-console.log('🔥 開始初始化 Firebase...');
-console.log('Firebase 設定:', firebaseConfig);
+console.log("🔥 開始初始化 Firebase...");
+console.log("Firebase 設定:", firebaseConfig);
 
 let app, database, dataRef;
 
 try {
   app = initializeApp(firebaseConfig);
-  console.log('✅ Firebase App 初始化成功');
+  console.log("✅ Firebase App 初始化成功");
 
   database = getDatabase(app);
-  console.log('✅ Database 取得成功');
+  console.log("✅ Database 取得成功");
 
-  dataRef = dbRef(database, 'zhongzhengCup');
-  console.log('✅ DataRef 建立成功，路徑: zhongzhengCup');
+  dataRef = dbRef(database, "zhongzhengCup");
+  console.log("✅ DataRef 建立成功，路徑: zhongzhengCup");
 } catch (error) {
-  console.error('❌ Firebase 初始化失敗:', error);
+  console.error("❌ Firebase 初始化失敗:", error);
 }
 
 // 狀態管理
 const loading = ref(false);
 const isLoggedIn = ref(false);
-const password = ref('');
-const loginError = ref('');
+const password = ref("");
+const loginError = ref("");
 
 const courts = reactive({
-  A: { title: 'A場', matches: [] },
-  B: { title: 'B場', matches: [] },
-  C: { title: 'C場', matches: [] },
-  D: { title: 'D場', matches: [] }
+  A: { title: "A場", matches: [] },
+  B: { title: "B場", matches: [] },
+  C: { title: "C場", matches: [] },
+  D: { title: "D場", matches: [] },
 });
 
-const mainTitle = ref('🏸 中正盃即時場次');
+const mainTitle = ref("🏸 中正盃即時場次");
 const editingMainTitle = ref(false);
-const mainTitleValue = ref('');
+const mainTitleValue = ref("");
 
 const editingTitle = ref(null);
-const titleValue = ref('');
+const titleValue = ref("");
 const titleInput = ref(null);
 
 const editingMatch = ref(null);
-const matchValue = ref('');
+const matchValue = ref("");
 
-const ADMIN_PASSWORD = 'admin123';
+const ADMIN_PASSWORD = "admin123";
 
 // 同步資料到 Firebase
 const syncToFirebase = async () => {
   try {
     await set(dataRef, {
       mainTitle: mainTitle.value,
-      courts: courts
+      courts: courts,
     });
   } catch (error) {
-    console.error('同步失敗:', error);
+    console.error("同步失敗:", error);
     await Swal.fire({
-      title: '同步失敗',
-      text: '無法儲存資料到雲端，請檢查網路連線',
-      icon: 'error',
-      confirmButtonText: '確定'
+      title: "同步失敗",
+      text: "無法儲存資料到雲端，請檢查網路連線",
+      icon: "error",
+      confirmButtonText: "確定",
     });
   }
 };
 
 // 初始化：監聽 Firebase 資料變化
 onMounted(() => {
-  console.log('📱 Component mounted，開始監聽 Firebase...');
+  console.log("📱 Component mounted，開始監聽 Firebase...");
   loading.value = true;
 
   try {
-    onValue(dataRef, (snapshot) => {
-      console.log('📊 收到 Firebase 資料變化');
-      const data = snapshot.val();
-      console.log('資料內容:', data);
+    onValue(
+      dataRef,
+      (snapshot) => {
+        console.log("📊 收到 Firebase 資料變化");
+        const data = snapshot.val();
+        console.log("資料內容:", data);
 
-      if (data) {
-        console.log('✅ 資料庫有資料，開始更新...');
+        if (data) {
+          console.log("✅ 資料庫有資料，開始更新...");
 
-        // 更新主標題
-        if (data.mainTitle) {
-          console.log('更新主標題:', data.mainTitle);
-          mainTitle.value = data.mainTitle;
-        }
-
-        // 更新場地資料
-        if (data.courts) {
-          console.log('更新場地資料:', data.courts);
-          // 確保每個場地都有 matches 屬性
-          Object.keys(data.courts).forEach(courtId => {
-            if (!data.courts[courtId].matches) {
-              data.courts[courtId].matches = [];
-            }
-          });
-          Object.assign(courts, data.courts);
-          console.log('場地資料更新完成:', courts);
-        }
-      } else {
-        console.log('⚠️ 資料庫是空的，初始化預設資料...');
-
-        // 如果資料庫是空的，初始化預設資料
-        const defaultData = {
-          mainTitle: '🏸 中正盃即時場次',
-          courts: {
-            A: { title: 'A場', matches: ['100', '105', '109', '112'] },
-            B: { title: 'B場', matches: ['102', '104'] },
-            C: { title: 'C場', matches: [] },
-            D: { title: 'D場', matches: ['103', '107', '111'] }
+          // 更新主標題
+          if (data.mainTitle) {
+            console.log("更新主標題:", data.mainTitle);
+            mainTitle.value = data.mainTitle;
           }
-        };
 
-        console.log('預設資料:', defaultData);
-        mainTitle.value = defaultData.mainTitle;
-        Object.assign(courts, defaultData.courts);
-        console.log('本地資料已更新:', courts);
+          // 更新場地資料
+          if (data.courts) {
+            console.log("更新場地資料:", data.courts);
+            // 確保每個場地都有 matches 屬性
+            Object.keys(data.courts).forEach((courtId) => {
+              if (!data.courts[courtId].matches) {
+                data.courts[courtId].matches = [];
+              }
+            });
+            Object.assign(courts, data.courts);
+            console.log("場地資料更新完成:", courts);
+          }
+        } else {
+          console.log("⚠️ 資料庫是空的，初始化預設資料...");
 
-        // 寫入 Firebase
-        console.log('嘗試寫入 Firebase...');
-        set(dataRef, defaultData)
-          .then(() => {
-            console.log('✅ 預設資料寫入成功');
-          })
-          .catch((error) => {
-            console.error('❌ 寫入失敗:', error);
-            console.error('錯誤代碼:', error.code);
-            console.error('錯誤訊息:', error.message);
-          });
-      }
+          // 如果資料庫是空的，初始化預設資料
+          const defaultData = {
+            mainTitle: "🏸 中正盃即時場次",
+            courts: {
+              A: { title: "A場", matches: ["100", "105", "109", "112"] },
+              B: { title: "B場", matches: ["102", "104"] },
+              C: { title: "C場", matches: [] },
+              D: { title: "D場", matches: ["103", "107", "111"] },
+            },
+          };
 
-      loading.value = false;
-      console.log('✅ 載入完成');
-    }, (error) => {
-      console.error('❌ 監聽 Firebase 時發生錯誤:', error);
-      console.error('錯誤代碼:', error.code);
-      console.error('錯誤訊息:', error.message);
-      loading.value = false;
-    });
+          console.log("預設資料:", defaultData);
+          mainTitle.value = defaultData.mainTitle;
+          Object.assign(courts, defaultData.courts);
+          console.log("本地資料已更新:", courts);
+
+          // 寫入 Firebase
+          console.log("嘗試寫入 Firebase...");
+          set(dataRef, defaultData)
+            .then(() => {
+              console.log("✅ 預設資料寫入成功");
+            })
+            .catch((error) => {
+              console.error("❌ 寫入失敗:", error);
+              console.error("錯誤代碼:", error.code);
+              console.error("錯誤訊息:", error.message);
+            });
+        }
+
+        loading.value = false;
+        console.log("✅ 載入完成");
+      },
+      (error) => {
+        console.error("❌ 監聽 Firebase 時發生錯誤:", error);
+        console.error("錯誤代碼:", error.code);
+        console.error("錯誤訊息:", error.message);
+        loading.value = false;
+      },
+    );
   } catch (error) {
-    console.error('❌ 設定監聽器時發生錯誤:', error);
+    console.error("❌ 設定監聽器時發生錯誤:", error);
     loading.value = false;
   }
 });
@@ -407,20 +379,20 @@ onUnmounted(() => {
 // 登入處理
 const showLoginDialog = async () => {
   const result = await Swal.fire({
-    title: '管理員登入',
-    input: 'password',
-    inputLabel: '請輸入管理員密碼',
-    inputPlaceholder: '輸入密碼',
+    title: "管理員登入",
+    input: "password",
+    inputLabel: "請輸入管理員密碼",
+    inputPlaceholder: "輸入密碼",
     showCancelButton: true,
-    confirmButtonText: '登入',
-    cancelButtonText: '取消',
-    confirmButtonColor: '#2563eb',
-    cancelButtonColor: '#6b7280',
+    confirmButtonText: "登入",
+    cancelButtonText: "取消",
+    confirmButtonColor: "#2563eb",
+    cancelButtonColor: "#6b7280",
     inputValidator: (value) => {
       if (!value) {
-        return '請輸入密碼！';
+        return "請輸入密碼！";
       }
-    }
+    },
   });
 
   if (result.isConfirmed) {
@@ -428,10 +400,10 @@ const showLoginDialog = async () => {
       isLoggedIn.value = true;
     } else {
       await Swal.fire({
-        title: '登入失敗',
-        text: '密碼錯誤',
-        icon: 'error',
-        confirmButtonText: '確定'
+        title: "登入失敗",
+        text: "密碼錯誤",
+        icon: "error",
+        confirmButtonText: "確定",
       });
     }
   }
@@ -440,13 +412,13 @@ const showLoginDialog = async () => {
 // 登出處理
 const handleLogout = async () => {
   const result = await Swal.fire({
-    title: '確定要登出？',
-    icon: 'question',
+    title: "確定要登出？",
+    icon: "question",
     showCancelButton: true,
-    confirmButtonText: '確定',
-    cancelButtonText: '取消',
-    confirmButtonColor: '#2563eb',
-    cancelButtonColor: '#6b7280'
+    confirmButtonText: "確定",
+    cancelButtonText: "取消",
+    confirmButtonColor: "#2563eb",
+    cancelButtonColor: "#6b7280",
   });
 
   if (result.isConfirmed) {
@@ -470,7 +442,7 @@ const saveMainTitle = async () => {
 
 const cancelEditMainTitle = () => {
   editingMainTitle.value = false;
-  mainTitleValue.value = '';
+  mainTitleValue.value = "";
 };
 
 // 場地標題編輯
@@ -494,18 +466,18 @@ const saveTitle = async (courtId) => {
 
 const cancelEditTitle = () => {
   editingTitle.value = null;
-  titleValue.value = '';
+  titleValue.value = "";
 };
 
 // 場次編輯
 const startEditMatch = (courtId, index) => {
   editingMatch.value = `${courtId}-${index}`;
-  matchValue.value = courts[courtId].matches[index] || '';
+  matchValue.value = courts[courtId].matches[index] || "";
 
   nextTick(() => {
     // 等待DOM更新後聚焦
     setTimeout(() => {
-      const inputs = document.querySelectorAll('.match-input');
+      const inputs = document.querySelectorAll(".match-input");
       const lastInput = inputs[inputs.length - 1];
       if (lastInput) {
         lastInput.focus();
@@ -514,58 +486,65 @@ const startEditMatch = (courtId, index) => {
           lastInput.select();
         }
         // 滾動到輸入框位置
-        lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 100);
   });
 };
 
 const saveMatch = async (courtId, index) => {
-  console.log('saveMatch called', { courtId, index, matchValue: matchValue.value, editingMatch: editingMatch.value });
+  console.log("saveMatch called", {
+    courtId,
+    index,
+    matchValue: matchValue.value,
+    editingMatch: editingMatch.value,
+  });
 
   // 防止重複觸發
   if (!editingMatch.value || editingMatch.value !== `${courtId}-${index}`) {
-    console.log('編輯狀態不匹配,跳過');
+    console.log("編輯狀態不匹配,跳過");
     return;
   }
 
-  const trimmedValue = matchValue.value ? matchValue.value.toString().trim() : '';
+  const trimmedValue = matchValue.value
+    ? matchValue.value.toString().trim()
+    : "";
 
   if (trimmedValue) {
     // 有輸入值,儲存
     courts[courtId].matches[index] = trimmedValue;
-    console.log('已儲存場次:', trimmedValue);
+    console.log("已儲存場次:", trimmedValue);
   } else {
     // 沒有輸入值,刪除這個空的場次
     courts[courtId].matches.splice(index, 1);
-    console.log('已刪除空場次');
+    console.log("已刪除空場次");
   }
 
   editingMatch.value = null;
-  matchValue.value = '';
+  matchValue.value = "";
 
   try {
     await syncToFirebase();
   } catch (error) {
-    console.error('同步失敗:', error);
+    console.error("同步失敗:", error);
   }
 };
 
 const cancelEditMatch = () => {
   // 如果正在編輯空的新增場次,刪除它
   if (editingMatch.value) {
-    const [courtId, indexStr] = editingMatch.value.split('-');
+    const [courtId, indexStr] = editingMatch.value.split("-");
     const index = parseInt(indexStr);
 
     // 如果該場次是空的(剛新增的),則刪除
-    if (courts[courtId].matches[index] === '') {
+    if (courts[courtId].matches[index] === "") {
       courts[courtId].matches.splice(index, 1);
       syncToFirebase();
     }
   }
 
   editingMatch.value = null;
-  matchValue.value = '';
+  matchValue.value = "";
 };
 
 // 判斷是否該顯示新增按鈕
@@ -583,22 +562,22 @@ const addMatch = (courtId) => {
     courts[courtId].matches = [];
   }
   // 新增一個空字串作為佔位
-  courts[courtId].matches.push('');
+  courts[courtId].matches.push("");
   const newIndex = courts[courtId].matches.length - 1;
 
   // 立即進入編輯模式
   nextTick(() => {
     editingMatch.value = `${courtId}-${newIndex}`;
-    matchValue.value = '';
+    matchValue.value = "";
 
     // 延遲聚焦確保DOM完全更新
     setTimeout(() => {
-      const inputs = document.querySelectorAll('.match-input');
+      const inputs = document.querySelectorAll(".match-input");
       const lastInput = inputs[inputs.length - 1];
       if (lastInput) {
         lastInput.focus();
         // 滾動到輸入框位置,避免被鍵盤遮擋
-        lastInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 150);
   });
@@ -619,7 +598,12 @@ const removeMatch = async (courtId, index) => {
 }
 
 body {
-  font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    "Noto Sans TC",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 .app-container {
@@ -628,80 +612,10 @@ body {
   padding: 1rem;
 }
 
-
-
-
-
 /* 主容器 */
 .main-container {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-/* 標題區 */
-.header-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 1rem;
-  gap: 1rem;
-  position: relative;
-}
-
-.main-title {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2f2f2f;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  text-align: center;
-}
-
-.admin-login-button {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  right: 0;
-}
-
-.admin-login-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-/* ========== 場次表格樣式 (一般使用者模式) ========== */
-.matches-table-container {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-}
-
-.matches-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-/* 表頭整列使用黑灰漸層 */
-.matches-table thead {
-  background: linear-gradient(to right, #374151 0%, #6b7280 100%);
-}
-
-.matches-table th {
-  padding: 1rem;
-  color: white;
-  font-weight: bold;
-  text-align: center;
-  font-size: 1.125rem;
 }
 
 /* 左上角的「場地」標籤 */
@@ -714,82 +628,6 @@ body {
 /* 場地標題 (A場、B場...) */
 .table-header-court {
   font-size: 1.25rem;
-}
-
-.matches-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.matches-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.matches-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-/* 左側標籤列 (目前/下一場/下下場) - 保持彩色漸層 */
-.table-cell-label {
-  padding: 1rem 0.5rem;
-  font-weight: bold;
-  font-size: 1.125rem;
-  color: white;
-  text-align: center;
-  min-width: 3.5rem;
-  line-height: 1.3;
-}
-
-/* 為左側標籤套用彩色漸層背景 */
-.match-0-label {
-  background: linear-gradient(to right, #ea580c 0%, #fb923c 100%);
-}
-
-.match-1-label {
-  background: linear-gradient(to right, #2563eb 0%, #60a5fa 100%);
-}
-
-.match-2-label {
-  background: linear-gradient(to right, #059669 0%, #34d399 100%);
-}
-
-.matches-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.matches-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.matches-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-/* 場次數字格子 */
-.table-cell-match {
-  padding: 1rem;
-  text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.match-0-cell {
-  background: linear-gradient(to right, rgba(234, 88, 12, 0.1) 0%, rgba(251, 146, 60, 0.1) 100%);
-  color: #ea580c;
-}
-
-.match-1-cell {
-  background: linear-gradient(to right, rgba(37, 99, 235, 0.1) 0%, rgba(96, 165, 250, 0.1) 100%);
-  color: #2563eb;
-}
-
-.match-2-cell {
-  background: linear-gradient(to right, rgba(5, 150, 105, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%);
-  color: #059669;
-}
-
-.match-empty-cell {
-  color: #d1d5db;
-  font-size: 1.5rem;
 }
 
 /* ========== 以下樣式保留給管理員模式使用 ========== */
@@ -1298,47 +1136,6 @@ body {
 @media (max-width: 640px) {
   .main-title {
     font-size: 1.5rem;
-  }
-
-  .admin-login-button {
-    padding: 0.4rem;
-  }
-
-  .admin-login-button svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  /* 表格在手機上的樣式 */
-  .matches-table th {
-    padding: 0.75rem 0.5rem;
-    font-size: 1rem;
-  }
-
-  .table-header-label {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.25rem;
-    line-height: 1.2;
-  }
-
-  .table-header-court {
-    font-size: 1rem;
-  }
-
-  .table-cell-label {
-    padding: 0.75rem 0.25rem;
-    font-size: 0.875rem;
-    min-width: 2.5rem;
-    line-height: 1.2;
-  }
-
-  .table-cell-match {
-    padding: 0.75rem 0.5rem;
-    font-size: 1.25rem;
-  }
-
-  .match-empty-cell {
-    font-size: 1rem;
   }
 
   /* 管理員模式 - 手機優化 */
