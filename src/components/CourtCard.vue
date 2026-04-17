@@ -23,116 +23,34 @@
     <!-- 場次列表 -->
     <div class="admin-matches">
       <!-- 前三個位置 -->
-      <div
-        v-for="index in [0, 1, 2]"
+      <MatchItem
+        v-for="(match, index) in displayMatches"
         :key="index"
-        :class="['admin-match-item', `match-${index}`]"
-      >
-        <div class="match-row">
-          <div class="match-label">
-            {{ ["目前場次", "下一場次", "下下場次"][index] }}
-          </div>
-          <!-- 編輯中顯示輸入框 -->
-          <input
-            v-if="editingMatch === index"
-            type="number"
-            inputmode="numeric"
-            v-model="matchValue"
-            @keydown.enter.prevent="saveMatch(index)"
-            @keydown.esc.prevent="cancelEditMatch"
-            @blur="saveMatch(index)"
-            class="match-input"
-            placeholder="輸入場次"
-            autofocus
-            ref="matchInputs"
-          />
-          <!-- 顯示場次號碼,可點擊編輯 -->
-          <div
-            v-else-if="
-              court.matches &&
-              court.matches[index] &&
-              court.matches[index] !== ''
-            "
-            :class="['match-number', `match-number-${index}`, 'editable']"
-            @click="startEditMatch(index)"
-          >
-            {{ court.matches[index] }}
-          </div>
-          <div v-else class="match-empty">-</div>
-        </div>
-
-        <!-- 按鈕區 -->
-        <div class="match-actions">
-          <button
-            v-if="court.matches && court.matches[index]"
-            @click="removeMatch(index)"
-            class="btn-remove"
-          >
-            −
-          </button>
-          <button
-            v-else-if="shouldShowAddButton(index)"
-            @click="addMatch()"
-            class="btn-add"
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <!-- 第四個之後的場次 -->
-      <div
-        v-for="(match, idx) in (court.matches || []).slice(3)"
-        :key="idx + 3"
-        class="admin-match-extra"
-      >
-        <div class="match-row">
-          <!-- 透明的標籤佔位,保持格式對齊 -->
-          <div class="match-label" style="opacity: 0">額外場次</div>
-
-          <!-- 編輯中顯示輸入框 -->
-          <input
-            v-if="editingMatch === idx + 3"
-            type="number"
-            inputmode="numeric"
-            v-model="matchValue"
-            @keydown.enter.prevent="saveMatch(idx + 3)"
-            @keydown.esc.prevent="cancelEditMatch"
-            @blur="saveMatch(idx + 3)"
-            class="match-input match-input-extra"
-            placeholder="輸入場次"
-            autofocus
-          />
-          <!-- 顯示場次號碼,可點擊編輯 -->
-          <div
-            v-else-if="match !== ''"
-            class="match-number editable"
-            @click="startEditMatch(idx + 3)"
-          >
-            {{ match }}
-          </div>
-          <!-- 空場次顯示為空 -->
-          <div v-else class="match-number" style="opacity: 0.3">-</div>
-        </div>
-
-        <div class="match-actions">
-          <button @click="removeMatch(idx + 3)" class="btn-remove">−</button>
-        </div>
-      </div>
+        :match="match"
+        :label="index < 3 ? ['目前場次', '下一場次', '下下場次'][index] : null"
+        :isShowAddButton="shouldShowAddButton(index)"
+        :autoEdit="autoEditIndex === index"
+        @add="addMatchHandler"
+        @save="(value) => saveMatch(index, value)"
+        @remove="removeMatch(index)"
+      />
 
       <!-- 最下方的 [+] 按鈕 -->
       <div
         v-if="court.matches && court.matches.length >= 3"
         class="add-more-container"
       >
-        <button @click="addMatch()" class="btn-add-more">+ 新增場次</button>
+        <button @click="addMatchHandler" class="btn-add-more">
+          + 新增場次
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
+import MatchItem from "@/components/MatchItem.vue";
 
 const props = defineProps<{
   court: { title: string; matches: string[] };
@@ -144,10 +62,16 @@ const emit = defineEmits(["sync"]);
 const editingTitle = ref<boolean>(false);
 const titleValue = ref("");
 const titleInput = ref(null);
-const editingMatch = ref<number | null>(null);
-const matchValue = ref("");
-const matchInputs = ref([]);
+const autoEditIndex = ref<number | null>(null);
 
+const displayMatches = computed(() => {
+  const matches = props.court.matches || [];
+  // 確保至少有 3 個項目，不足的補空字串
+  while (matches.length < 3) {
+    return [...matches, ...Array(3 - matches.length).fill("")];
+  }
+  return matches;
+});
 // 場地標題編輯
 const startEditTitle = () => {
   editingTitle.value = true;
@@ -172,45 +96,14 @@ const cancelEditTitle = () => {
   titleValue.value = "";
 };
 
-// 場次編輯
-const startEditMatch = (index: number) => {
-  editingMatch.value = index;
-  matchValue.value = props.court.matches[index] || "";
-
-  nextTick(() => {
-    // 等待DOM更新後聚焦
-    setTimeout(() => {
-      const lastInput = matchInputs.value[matchInputs.value.length - 1];
-
-      if (lastInput) {
-        lastInput.focus();
-        // 在手機上選取全部文字
-        if (lastInput.select) {
-          lastInput.select();
-        }
-        // 滾動到輸入框位置
-        lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
-  });
-};
-const saveMatch = async (index: number) => {
+const saveMatch = async (index: number, value: string) => {
   console.log("saveMatch called", {
     courtId: props.courtId,
     index,
-    matchValue: matchValue.value,
-    editingMatch: editingMatch.value,
+    matchValue: value,
   });
 
-  // 防止重複觸發
-  if (!editingMatch.value || editingMatch.value !== index) {
-    console.log("編輯狀態不匹配,跳過");
-    return;
-  }
-
-  const trimmedValue = matchValue.value
-    ? matchValue.value.toString().trim()
-    : "";
+  const trimmedValue = value ? value.toString().trim() : "";
 
   if (trimmedValue) {
     // 有輸入值,儲存
@@ -221,9 +114,7 @@ const saveMatch = async (index: number) => {
     props.court.matches.splice(index, 1);
     console.log("已刪除空場次");
   }
-
-  editingMatch.value = null;
-  matchValue.value = "";
+  autoEditIndex.value = null; // 重置，避免下次渲染時又觸發 autoEdit
 
   try {
     emit("sync");
@@ -232,48 +123,11 @@ const saveMatch = async (index: number) => {
   }
 };
 
-const cancelEditMatch = () => {
-  // 如果正在編輯空的新增場次,刪除它
-  if (editingMatch.value !== null) {
-    const index = editingMatch.value;
-
-    // 如果該場次是空的(剛新增的),則刪除
-    if (props.court.matches[index] === "") {
-      props.court.matches.splice(index, 1);
-      emit("sync");
-    }
-  }
-
-  editingMatch.value = null;
-  matchValue.value = "";
-};
-
-// 新增場次 - 改進版：直接在原地新增輸入框
-const addMatch = () => {
-  // 新增一個空字串作為佔位
-  props.court.matches.push("");
-  const newIndex = props.court.matches.length - 1;
-
-  // 立即進入編輯模式
-  nextTick(() => {
-    editingMatch.value = newIndex;
-    matchValue.value = "";
-
-    // 延遲聚焦確保DOM完全更新
-    setTimeout(() => {
-      const lastInput = matchInputs.value[matchInputs.value.length - 1];
-      if (lastInput) {
-        lastInput.focus();
-        // 滾動到輸入框位置,避免被鍵盤遮擋
-        lastInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 150);
-  });
-};
-
 // 刪除場次 - 改進版：移除確認對話框,直接刪除
 const removeMatch = async (index: number) => {
   props.court.matches.splice(index, 1);
+  autoEditIndex.value = null; // 重置，避免下次渲染時又觸發 autoEdit
+
   emit("sync");
 };
 
@@ -285,103 +139,23 @@ const shouldShowAddButton = (index: number) => {
   if (index === 2) return matches.length === 2;
   return false;
 };
+
+const addMatchHandler = function () {
+  // 新增一個空字串作為佔位
+  props.court.matches.push("");
+  nextTick(() => {
+    autoEditIndex.value = props.court.matches.length - 1;
+    // console.log("autoEditIndex set to", autoEditIndex.value);
+  });
+  // console.log("addMatchHandler", {
+  //   matchesLength: props.court.matches.length,
+  //   autoEditIndex: autoEditIndex.value,
+  //   displayMatchesLength: displayMatches.value.length,
+  // });
+  emit("sync");
+};
 </script>
 <style scoped>
-/* 可編輯的場次號碼樣式 */
-.match-number.editable {
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
-}
-
-.match-number.editable:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
-
-/* 場次輸入框樣式 */
-.match-input {
-  flex: 1;
-  text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #1f2937;
-  background: white;
-  border: 2px solid #2563eb;
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  outline: none;
-  width: 100%;
-  min-width: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-
-.match-input:focus {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
-}
-
-.match-input-extra {
-  font-size: 2rem;
-}
-
-.match-empty {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
-  text-align: center;
-  flex: 1;
-}
-
-.match-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-add,
-.btn-remove {
-  padding: 0.5rem 0.75rem;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1rem;
-  transition: all 0.2s;
-  min-width: 2.5rem;
-}
-
-.btn-add {
-  background: #2563eb;
-  color: white;
-}
-
-.btn-add:hover {
-  background: #1d4ed8;
-}
-
-.btn-remove {
-  background: #dc2626;
-  color: white;
-}
-
-.btn-remove:hover {
-  background: #b91c1c;
-}
-
-/* 額外場次 - 使用與前三個相同的結構 */
-.admin-match-extra {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  gap: 0.5rem;
-  background: linear-gradient(to right, #6b7280 0%, #9ca3af 100%);
-}
-
 /* 新增更多按鈕 */
 .add-more-container {
   display: flex;
@@ -418,20 +192,6 @@ const shouldShowAddButton = (index: number) => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.admin-match-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  gap: 0.5rem;
-}
-
-/* 為管理員的場次套用統一的灰色漸層配色 - 由左至右從深到淺 */
-.admin-match-item {
-  background: linear-gradient(to right, #6b7280 0%, #9ca3af 100%);
 }
 
 .court-header {
@@ -485,90 +245,11 @@ const shouldShowAddButton = (index: number) => {
   transition: all 0.2s;
 }
 
-.admin-match-item .match-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.admin-match-item .match-label {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
-  text-align: left;
-  flex-shrink: 0;
-}
-
-.admin-match-item .match-number {
-  font-size: 2rem;
-  font-weight: bold;
-  text-align: center;
-  flex: 1;
-  color: white;
-}
-
 @media (max-width: 640px) {
-  /* 手機上的輸入框調整 */
-  .match-input {
-    font-size: 1.25rem;
-    padding: 0.25rem;
-  }
-
-  .match-input-extra {
-    font-size: 1.25rem;
-  }
-
-  /* 縮小按鈕 */
-  .btn-add,
-  .btn-remove {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
-    min-width: 2rem;
-  }
   /* 縮小場次卡片的間隔 */
   .admin-matches {
     gap: 0.25rem;
   }
-
-  /* 縮小場次卡片的padding */
-  .admin-match-item {
-    padding: 0.375rem 0.5rem;
-  }
-
-  .match-empty {
-    font-size: 1rem;
-  }
-  /* 縮小場次標籤和號碼的字體 */
-  .admin-match-item .match-label {
-    font-size: 1rem;
-  }
-
-  .admin-match-item .match-number {
-    font-size: 1.25rem;
-  }
-
-  .admin-match-extra .match-row {
-    gap: 0.5rem;
-  }
-
-  .admin-match-extra .match-label {
-    font-size: 1rem;
-  }
-
-  .admin-match-extra .match-number {
-    font-size: 1.25rem;
-  }
-  /* 縮小場次卡片內部的gap */
-  .admin-match-item .match-row {
-    gap: 0.5rem;
-  }
-}
-
-/* 額外場次 */
-.admin-match-extra {
-  padding: 0.375rem 0.5rem;
 }
 
 .court-card {
