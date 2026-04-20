@@ -4,18 +4,17 @@
 
     <!-- 一般使用者模式 -->
     <UserMode
-      v-else-if="!isLoggedIn"
+      v-else-if="!authStore.isLoggedIn"
       class="main-container"
-      @login="showLoginDialog"
+      @login="authStore.showLoginDialog"
     />
-    <AdminMode v-else class="main-container" @logout="handleLogout" />
+    <AdminMode v-else class="main-container" @logout="authStore.handleLogout" />
     <!-- 管理員模式 -->
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import Swal from "sweetalert2";
+import { onMounted, onUnmounted } from "vue";
 import LoadingScreen from "./components/LoadingScreen.vue";
 import UserMode from "./components/UserMode.vue";
 
@@ -23,6 +22,7 @@ import UserMode from "./components/UserMode.vue";
 import { initializeApp } from "firebase/app";
 import AdminMode from "./components/AdminMode.vue";
 import { useMatchesStore } from "@/stores/matches.js";
+import { useAutoStore } from "@/stores/auth.js";
 
 // Firebase 設定（請替換成你自己的設定）
 const firebaseConfig = {
@@ -41,6 +41,7 @@ console.log("🔥 開始初始化 Firebase...");
 console.log("Firebase 設定:", firebaseConfig);
 
 const matchesStore = useMatchesStore();
+const authStore = useAutoStore();
 
 try {
   initializeApp(firebaseConfig);
@@ -48,11 +49,6 @@ try {
 } catch (error) {
   console.error("❌ Firebase 初始化失敗:", error);
 }
-
-// 狀態管理
-const isLoggedIn = ref(false);
-
-const ADMIN_PASSWORD = "admin123";
 
 // 初始化：監聽 Firebase 資料變化
 onMounted(() => {
@@ -64,56 +60,6 @@ onMounted(() => {
 onUnmounted(() => {
   matchesStore.stopSync();
 });
-
-// 登入處理
-const showLoginDialog = async () => {
-  const result = await Swal.fire({
-    title: "管理員登入",
-    input: "password",
-    inputLabel: "請輸入管理員密碼",
-    inputPlaceholder: "輸入密碼",
-    showCancelButton: true,
-    confirmButtonText: "登入",
-    cancelButtonText: "取消",
-    confirmButtonColor: "#2563eb",
-    cancelButtonColor: "#6b7280",
-    inputValidator: (value) => {
-      if (!value) {
-        return "請輸入密碼！";
-      }
-    },
-  });
-
-  if (result.isConfirmed) {
-    if (result.value === ADMIN_PASSWORD) {
-      isLoggedIn.value = true;
-    } else {
-      await Swal.fire({
-        title: "登入失敗",
-        text: "密碼錯誤",
-        icon: "error",
-        confirmButtonText: "確定",
-      });
-    }
-  }
-};
-
-// 登出處理
-const handleLogout = async () => {
-  const result = await Swal.fire({
-    title: "確定要登出？",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonText: "確定",
-    cancelButtonText: "取消",
-    confirmButtonColor: "#2563eb",
-    cancelButtonColor: "#6b7280",
-  });
-
-  if (result.isConfirmed) {
-    isLoggedIn.value = false;
-  }
-};
 </script>
 
 <style scoped>
