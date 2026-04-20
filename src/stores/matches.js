@@ -23,7 +23,7 @@ const ROOT_PATH = "zhongzhengCup";
 
 export const useMatchesStore = defineStore("matches", () => {
   const mainTitle = ref("");
-  const courts = ref("");
+  const courts = ref({});
   const loading = ref(true);
 
   let unsubscribe = null;
@@ -119,6 +119,10 @@ export const useMatchesStore = defineStore("matches", () => {
     set(dbRef(db, `${ROOT_PATH}/courts/${courtId}/matches`), newMatches);
   }
 
+  function getMatchAt(courtId, index) {
+    return courts.value[courtId]?.matches?.[index] ?? "";
+  }
+
   // ============ 暴露給元件 ============
   return {
     // state
@@ -134,5 +138,6 @@ export const useMatchesStore = defineStore("matches", () => {
     addMatch,
     updateMatch,
     removeMatch,
+    getMatchAt,
   };
 });

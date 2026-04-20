@@ -50,13 +50,8 @@
               :key="`match-0-${courtId}`"
               class="table-cell-match match-0-cell"
             >
-              <span
-                v-if="
-                  store.courts[courtId].matches &&
-                  store.courts[courtId].matches[0]
-                "
-              >
-                {{ store.courts[courtId].matches[0] }}
+              <span v-if="store.getMatchAt(courtId, 0)">
+                {{ store.getMatchAt(courtId, 0) }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
@@ -69,13 +64,8 @@
               :key="`match-1-${courtId}`"
               class="table-cell-match match-1-cell"
             >
-              <span
-                v-if="
-                  store.courts[courtId].matches &&
-                  store.courts[courtId].matches[1]
-                "
-              >
-                {{ store.courts[courtId].matches[1] }}
+              <span v-if="store.getMatchAt(courtId, 1)">
+                {{ store.getMatchAt(courtId, 1) }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
@@ -88,13 +78,8 @@
               :key="`match-2-${courtId}`"
               class="table-cell-match match-2-cell"
             >
-              <span
-                v-if="
-                  store.courts[courtId].matches &&
-                  store.courts[courtId].matches[2]
-                "
-              >
-                {{ store.courts[courtId].matches[2] }}
+              <span v-if="store.getMatchAt(courtId, 2)">
+                {{ store.getMatchAt(courtId, 2) }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
