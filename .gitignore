@@ -1,0 +1,5 @@
+node_modules
+.idea
+node_modules/.vue-global-types
+.idea/workspace.xml
+node_modules/.vue-global-types/vue_99_0_0_0.d.ts
