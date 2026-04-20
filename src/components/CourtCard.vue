@@ -51,14 +51,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from "vue";
 import MatchItem from "@/components/MatchItem.vue";
+import { useMatchesStore } from "@/stores/matches";
 
 const props = defineProps<{
   court: { title: string; matches: string[] };
   courtId: string;
 }>();
 
-const emit = defineEmits(["sync"]);
-
+const store = useMatchesStore();
 const editingTitle = ref<boolean>(false);
 const titleValue = ref("");
 const titleInput = ref(null);
@@ -85,9 +85,8 @@ const startEditTitle = () => {
 
 const saveTitle = async () => {
   if (titleValue.value.trim()) {
-    props.court.title = titleValue.value.trim();
+    store.updateCourtTitle(props.courtId, titleValue.value.trim());
     editingTitle.value = false;
-    emit("sync");
   }
 };
 
@@ -107,17 +106,16 @@ const saveMatch = async (index: number, value: string) => {
 
   if (trimmedValue) {
     // 有輸入值,儲存
-    props.court.matches[index] = trimmedValue;
+    store.updateMatch(props.courtId, index, trimmedValue);
     console.log("已儲存場次:", trimmedValue);
   } else {
     // 沒有輸入值,刪除這個空的場次
-    props.court.matches.splice(index, 1);
+    store.removeMatch(props.courtId, index);
     console.log("已刪除空場次");
   }
   autoEditIndex.value = null; // 重置，避免下次渲染時又觸發 autoEdit
 
   try {
-    emit("sync");
   } catch (error) {
     console.error("同步失敗:", error);
   }
@@ -125,10 +123,8 @@ const saveMatch = async (index: number, value: string) => {
 
 // 刪除場次 - 改進版：移除確認對話框,直接刪除
 const removeMatch = async (index: number) => {
-  props.court.matches.splice(index, 1);
+  store.removeMatch(props.courtId, index);
   autoEditIndex.value = null; // 重置，避免下次渲染時又觸發 autoEdit
-
-  emit("sync");
 };
 
 // 判斷是否該顯示新增按鈕
@@ -142,17 +138,11 @@ const shouldShowAddButton = (index: number) => {
 
 const addMatchHandler = function () {
   // 新增一個空字串作為佔位
-  props.court.matches.push("");
+  store.addMatch(props.courtId, "");
   nextTick(() => {
     autoEditIndex.value = props.court.matches.length - 1;
     // console.log("autoEditIndex set to", autoEditIndex.value);
   });
-  // console.log("addMatchHandler", {
-  //   matchesLength: props.court.matches.length,
-  //   autoEditIndex: autoEditIndex.value,
-  //   displayMatchesLength: displayMatches.value.length,
-  // });
-  emit("sync");
 };
 </script>
 <style scoped>

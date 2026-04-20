@@ -2,7 +2,7 @@
   <div :class="['admin-match-item']">
     <div class="match-row">
       <div class="match-label" :style="{ opacity: label ? 1 : 0 }">
-        {{ label || "佔位" }}
+        {{ label || "佔位佔位" }}
       </div>
       <!-- 編輯中顯示輸入框 -->
       <input

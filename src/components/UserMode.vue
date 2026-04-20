@@ -2,7 +2,7 @@
   <div>
     <!-- 標題區 -->
     <div class="header-container">
-      <h1 class="main-title">{{ mainTitle }}</h1>
+      <h1 class="main-title">{{ store.mainTitle }}</h1>
       <!-- 管理員登入按鈕 -->
       <button
         @click="emit('login')"
@@ -37,7 +37,7 @@
               :key="courtId"
               class="table-header-court"
             >
-              {{ courts[courtId].title }}
+              {{ store.courts[courtId].title }}
             </th>
           </tr>
         </thead>
@@ -51,9 +51,12 @@
               class="table-cell-match match-0-cell"
             >
               <span
-                v-if="courts[courtId].matches && courts[courtId].matches[0]"
+                v-if="
+                  store.courts[courtId].matches &&
+                  store.courts[courtId].matches[0]
+                "
               >
-                {{ courts[courtId].matches[0] }}
+                {{ store.courts[courtId].matches[0] }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
@@ -67,9 +70,12 @@
               class="table-cell-match match-1-cell"
             >
               <span
-                v-if="courts[courtId].matches && courts[courtId].matches[1]"
+                v-if="
+                  store.courts[courtId].matches &&
+                  store.courts[courtId].matches[1]
+                "
               >
-                {{ courts[courtId].matches[1] }}
+                {{ store.courts[courtId].matches[1] }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
@@ -83,9 +89,12 @@
               class="table-cell-match match-2-cell"
             >
               <span
-                v-if="courts[courtId].matches && courts[courtId].matches[2]"
+                v-if="
+                  store.courts[courtId].matches &&
+                  store.courts[courtId].matches[2]
+                "
               >
-                {{ courts[courtId].matches[2] }}
+                {{ store.courts[courtId].matches[2] }}
               </span>
               <span v-else class="match-empty-cell">-</span>
             </td>
@@ -97,11 +106,9 @@
 </template>
 
 <script setup>
-defineProps({
-  mainTitle: String,
-  courts: Object,
-});
+import { useMatchesStore } from "@/stores/matches.js";
 
+const store = useMatchesStore();
 const emit = defineEmits(["login"]);
 </script>
 

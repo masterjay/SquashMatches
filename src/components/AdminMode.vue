@@ -17,7 +17,7 @@
       </div>
       <div v-else class="main-title-display">
         <h1 class="admin-title">
-          {{ mainTitle }}
+          {{ store.mainTitle }}
           <span class="admin-badge">(管理模式)</span>
         </h1>
         <button @click="startEditMainTitle" class="btn-edit-main">✎</button>
@@ -30,9 +30,8 @@
     <CourtCard
       v-for="courtId in ['A', 'B', 'C', 'D']"
       :key="courtId"
-      :court="courts[courtId]"
+      :court="store.courts[courtId]"
       :courtId="courtId"
-      @sync="emit('sync')"
     />
     <!-- 使用說明 -->
     <div class="help-card">
@@ -54,28 +53,24 @@
 <script setup>
 import { ref } from "vue";
 import CourtCard from "@/components/CourtCard.vue";
+import { useMatchesStore } from "@/stores/matches.js";
 
-const props = defineProps({
-  courts: Object,
-  mainTitle: String,
-});
-
-const emit = defineEmits(["update:main-title", "logout", "sync"]);
+const emit = defineEmits(["logout"]);
 
 const editingMainTitle = ref(false);
 const mainTitleValue = ref("");
+const store = useMatchesStore();
 
 // 主標題編輯
 const startEditMainTitle = () => {
-  mainTitleValue.value = props.mainTitle || "";
+  mainTitleValue.value = store.mainTitle || "";
   editingMainTitle.value = true;
 };
 
 const saveMainTitle = async () => {
   if (mainTitleValue.value.trim()) {
-    emit("update:main-title", mainTitleValue.value.trim());
     editingMainTitle.value = false;
-    emit("sync");
+    store.updateMainTitle(mainTitleValue.value);
   }
 };
 
