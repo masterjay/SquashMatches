@@ -3,12 +3,8 @@
     <LoadingScreen v-if="matchesStore.loading" />
 
     <!-- 一般使用者模式 -->
-    <UserMode
-      v-else-if="!authStore.isLoggedIn"
-      class="main-container"
-      @login="authStore.showLoginDialog"
-    />
-    <AdminMode v-else class="main-container" @logout="authStore.handleLogout" />
+    <UserMode v-else-if="!authStore.isLoggedIn" class="main-container" />
+    <AdminMode v-else class="main-container" />
     <!-- 管理員模式 -->
   </div>
 </template>

@@ -5,7 +5,7 @@
       <h1 class="main-title">{{ store.mainTitle }}</h1>
       <!-- 管理員登入按鈕 -->
       <button
-        @click="emit('login')"
+        @click="authStore.showLoginDialog"
         class="admin-login-button"
         title="管理員登入"
       >
@@ -107,9 +107,10 @@
 
 <script setup>
 import { useMatchesStore } from "@/stores/matches.js";
+import { useAuthStore } from "@/stores/auth.js";
 
 const store = useMatchesStore();
-const emit = defineEmits(["login"]);
+const authStore = useAuthStore();
 </script>
 
 <style scoped>

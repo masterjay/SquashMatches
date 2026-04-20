@@ -23,7 +23,9 @@
         <button @click="startEditMainTitle" class="btn-edit-main">✎</button>
       </div>
 
-      <button @click="emit('logout')" class="logout-button">登出</button>
+      <button @click="authStore.handleLogout" class="logout-button">
+        登出
+      </button>
     </div>
 
     <!-- 場地列表 -->
@@ -54,13 +56,12 @@
 import { ref } from "vue";
 import CourtCard from "@/components/CourtCard.vue";
 import { useMatchesStore } from "@/stores/matches.js";
-
-const emit = defineEmits(["logout"]);
+import { useAuthStore } from "@/stores/auth.js";
 
 const editingMainTitle = ref(false);
 const mainTitleValue = ref("");
 const store = useMatchesStore();
-
+const authStore = useAuthStore();
 // 主標題編輯
 const startEditMainTitle = () => {
   mainTitleValue.value = store.mainTitle || "";
