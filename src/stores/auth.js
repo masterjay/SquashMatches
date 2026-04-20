@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 
 const ADMIN_PASSWORD = "admin123";
 
-export const useAutoStore = defineStore("auth", () => {
+export const useAuthStore = defineStore("auth", () => {
   // 狀態管理
   const isLoggedIn = ref(false);
   // 登入處理

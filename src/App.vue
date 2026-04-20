@@ -22,7 +22,7 @@ import UserMode from "./components/UserMode.vue";
 import { initializeApp } from "firebase/app";
 import AdminMode from "./components/AdminMode.vue";
 import { useMatchesStore } from "@/stores/matches.js";
-import { useAutoStore } from "@/stores/auth.js";
+import { useAuthStore } from "@/stores/auth.js";
 
 // Firebase 設定（請替換成你自己的設定）
 const firebaseConfig = {
@@ -41,7 +41,7 @@ console.log("🔥 開始初始化 Firebase...");
 console.log("Firebase 設定:", firebaseConfig);
 
 const matchesStore = useMatchesStore();
-const authStore = useAutoStore();
+const authStore = useAuthStore();
 
 try {
   initializeApp(firebaseConfig);
