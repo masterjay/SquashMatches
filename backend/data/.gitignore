@@ -1,0 +1,5 @@
+# SQLite databases are runtime data, not source.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
