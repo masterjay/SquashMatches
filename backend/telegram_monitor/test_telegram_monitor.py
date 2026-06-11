@@ -14,9 +14,12 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
+from . import config, notify
 from .crawler import StructureError, parse_posts
 from .db import (
+    Post,
     connect,
     get_max_post_id,
     insert_posts,
@@ -132,6 +135,81 @@ class DedupTests(unittest.TestCase):
                 "SELECT COUNT(*) AS c FROM telegram_posts"
             ).fetchone()["c"]
         self.assertEqual(count, 3)
+
+
+class _FakeResp:
+    def __init__(self, status_code=204, payload=None):
+        self.status_code = status_code
+        self._payload = payload or {}
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import requests
+
+            raise requests.HTTPError(f"HTTP {self.status_code}")
+
+
+class NotifyTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = str(Path(self.tmp.name) / "test.db")
+        self._orig_db = config.DB_PATH
+        self._orig_hook = config.DISCORD_WEBHOOK_URL
+        config.DB_PATH = self.db
+        config.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1/abc"
+        # Seed two stored posts (notified=0) to push.
+        self.posts = [
+            Post(201, "Gooaye", "first", "2026-06-11T01:00:00+00:00", "https://t.me/Gooaye/201"),
+            Post(202, "Gooaye", "second", "2026-06-11T02:00:00+00:00", "https://t.me/Gooaye/202"),
+        ]
+        with connect(self.db) as conn:
+            insert_posts(conn, self.posts, datetime.now(timezone.utc).isoformat())
+
+    def tearDown(self):
+        config.DB_PATH = self._orig_db
+        config.DISCORD_WEBHOOK_URL = self._orig_hook
+        self.tmp.cleanup()
+
+    def _notified_flags(self):
+        with connect(self.db) as conn:
+            rows = conn.execute(
+                "SELECT post_id, notified FROM telegram_posts ORDER BY post_id"
+            ).fetchall()
+        return {r["post_id"]: r["notified"] for r in rows}
+
+    def test_build_payload_shape(self):
+        payload = notify._build_payload(self.posts[0])
+        embed = payload["embeds"][0]
+        self.assertEqual(embed["title"], "Gooaye #201")
+        self.assertEqual(embed["url"], "https://t.me/Gooaye/201")
+        self.assertEqual(embed["timestamp"], "2026-06-11T01:00:00+00:00")
+        self.assertEqual(embed["description"], "first")
+
+    def test_success_marks_notified(self):
+        with mock.patch.object(notify.requests, "post", return_value=_FakeResp(204)) as p:
+            sent = notify.notify(self.posts)
+        self.assertEqual(sent, [201, 202])
+        self.assertEqual(p.call_count, 2)
+        self.assertEqual(self._notified_flags(), {201: 1, 202: 1})
+
+    def test_skips_when_no_webhook(self):
+        config.DISCORD_WEBHOOK_URL = ""
+        with mock.patch.object(notify.requests, "post") as p:
+            sent = notify.notify(self.posts)
+        self.assertEqual(sent, [])
+        p.assert_not_called()
+        self.assertEqual(self._notified_flags(), {201: 0, 202: 0})
+
+    def test_failure_leaves_remaining_unnotified(self):
+        # First post fails permanently -> nothing notified, run aborts.
+        with mock.patch.object(notify.requests, "post", return_value=_FakeResp(500)):
+            with mock.patch.object(notify.time, "sleep"):  # no real backoff wait
+                sent = notify.notify(self.posts)
+        self.assertEqual(sent, [])
+        self.assertEqual(self._notified_flags(), {201: 0, 202: 0})
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Telegram public-channel polling crawler (MVP: fetch + store).
 
 Fetches new posts from the t.me/s/<channel> web stream, dedupes via SQLite,
-and exposes a pluggable notify() hook for a later LINE push integration.
+and pushes new posts to a Discord channel via the notify() webhook hook.
 """
 
 from .db import Post

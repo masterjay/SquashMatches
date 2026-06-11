@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS telegram_posts (
     posted_at  TEXT,                  -- ISO8601 from time[datetime]
     url        TEXT,                  -- permalink to the post
     fetched_at TEXT NOT NULL,         -- when we crawled it (ISO8601 UTC)
-    notified   INTEGER NOT NULL DEFAULT 0  -- flag for the LINE push hook
+    notified   INTEGER NOT NULL DEFAULT 0  -- flag for the Discord push hook
 );
 """
 
@@ -115,7 +115,7 @@ def insert_posts(
 def mark_notified(conn: sqlite3.Connection, post_ids: Iterable[int]) -> int:
     """Set notified=1 for the given post ids. Returns rows updated.
 
-    Used by the (future) LINE push hook after a successful push.
+    Used by the Discord push hook after a successful push.
     """
     ids = list(post_ids)
     if not ids:

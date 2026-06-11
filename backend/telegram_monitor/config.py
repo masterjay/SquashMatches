@@ -59,6 +59,13 @@ POLL_INTERVAL_MINUTES = int(os.environ.get("TELEGRAM_MONITOR_INTERVAL_MIN", "30"
 # Number of characters used for the summary in logs / new-post listing.
 SUMMARY_CHARS = int(os.environ.get("TELEGRAM_MONITOR_SUMMARY_CHARS", "80"))
 
+# --- Discord push ----------------------------------------------------------
+
+# Incoming webhook URL for the Discord channel to push new posts to. This is a
+# secret -- set it via the environment, do NOT commit it. If empty, the notify
+# hook is skipped and posts remain notified=0 for a later retry.
+DISCORD_WEBHOOK_URL = os.environ.get("TELEGRAM_MONITOR_DISCORD_WEBHOOK", "")
+
 
 def channel_url() -> str:
     """Full URL of the channel's public web message stream."""

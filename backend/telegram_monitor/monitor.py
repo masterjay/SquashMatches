@@ -59,7 +59,7 @@ def process_new_posts(channel: str = None) -> List[Post]:
     )
     _log_new_posts(inserted)
 
-    # Pluggable downstream hook (LINE push lives here later).
+    # Pluggable downstream hook (Discord webhook push).
     notify(inserted)
     return inserted
 

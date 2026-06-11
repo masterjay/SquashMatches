@@ -3,8 +3,8 @@
 Polling crawler for the public Telegram channel **股癌 Gooaye**
 (<https://t.me/s/Gooaye>). It fetches the latest posts from the public web
 message stream, dedupes them in SQLite, and only processes posts it has not
-seen before. This is the **fetch + store MVP**; LINE push is left as a
-pluggable `notify()` hook.
+seen before. New posts are pushed to a **Discord channel** via an incoming
+webhook (the pluggable `notify()` hook).
 
 ## What it does
 
@@ -18,7 +18,8 @@ pluggable `notify()` hook.
    - `url` from `a.tgme_widget_message_date[href]`
 4. Keeps only `post_id > last_seen`, ascending, and `INSERT OR IGNORE`s them.
 5. Emits a structured log line per new post (id, time, first 80 chars) and
-   calls the pluggable `notify(posts)` hook.
+   pushes each new post to Discord via `notify(posts)`. Successfully-pushed
+   posts are flagged `notified=1`; failures stay `notified=0` for the next run.
 
 If the expected selectors stop matching (Telegram occasionally restructures the
 markup), the crawler raises `StructureError` **loudly** rather than silently
@@ -42,7 +43,7 @@ telegram_posts(
   posted_at  TEXT,                  -- ISO8601 from time[datetime]
   url        TEXT,
   fetched_at TEXT,                  -- crawl time (ISO8601 UTC)
-  notified   INTEGER DEFAULT 0      -- flag for the LINE push hook
+  notified   INTEGER DEFAULT 0      -- flag for the Discord push hook
 )
 ```
 
@@ -111,7 +112,8 @@ interpreter to match your deployment:
 
 ```cron
 # Poll Gooaye every 30 minutes; append logs for debugging.
-*/30 * * * * cd /opt/MyStock && /usr/bin/python3 -m backend.telegram_monitor >> /var/log/telegram_monitor.log 2>&1
+# Set the Discord webhook here (or in a sourced env file) so cron sees it.
+*/30 * * * * cd /opt/MyStock && TELEGRAM_MONITOR_DISCORD_WEBHOOK='https://discord.com/api/webhooks/XXX/YYY' /usr/bin/python3 -m backend.telegram_monitor >> /var/log/telegram_monitor.log 2>&1
 ```
 
 If you use a virtualenv, point at its interpreter, e.g.
@@ -135,23 +137,44 @@ All settings are environment variables with sensible defaults (see
 | `TELEGRAM_MONITOR_BACKFILL_MAX_PAGES` | `50` | Backfill page cap |
 | `TELEGRAM_MONITOR_INTERVAL_MIN` | `30` | Informational cron cadence |
 | `TELEGRAM_MONITOR_SUMMARY_CHARS` | `80` | Summary length in logs |
+| `TELEGRAM_MONITOR_DISCORD_WEBHOOK` | _(empty)_ | Discord webhook URL (secret) |
 
-## Pluggable LINE push (later)
+## Discord push
 
-`monitor.process_new_posts()` / `backfill()` call `notify(new_posts)` after
-storing new rows. `notify.py` is currently a no-op that logs the pending posts.
-To wire up the LINE bot (Flask + `gemini-2.5-flash` summary):
+New posts are pushed to a Discord channel via an **incoming webhook**. Each post
+is sent as an embed (title `Gooaye #<id>` linking to the post, the post text as
+the description, and the post timestamp).
 
-1. Implement the push in `notify.notify(posts)`.
-2. On successful push, mark rows so they are not re-sent:
+Configure the webhook via the environment -- it is a secret, so it is **not**
+committed to the repo:
 
-   ```python
-   from backend.telegram_monitor.db import connect, mark_notified
-   with connect() as conn:
-       mark_notified(conn, [p.post_id for p in pushed])
-   ```
+```bash
+export TELEGRAM_MONITOR_DISCORD_WEBHOOK='https://discord.com/api/webhooks/<id>/<token>'
+python -m backend.telegram_monitor
+```
 
-3. Let failures propagate/log so the next cron run retries the `notified=0` rows.
+Behaviour:
+
+- Posts are sent oldest-first so they read chronologically in the channel.
+- On a successful push, the row is flagged `notified=1` and is never re-sent.
+- On failure (network, 5xx, rate limit exhausted), the post stays `notified=0`
+  and the run stops sending so order is preserved; the next cron run retries it.
+- Discord `429` rate limits are honoured via `retry_after`.
+- If the webhook env var is unset, pushing is skipped with a warning and posts
+  remain `notified=0` (crawl + store still works).
+
+To preview the exact payload without hitting Discord:
+
+```bash
+python - <<'PY'
+import os
+os.environ.setdefault("TELEGRAM_MONITOR_DISCORD_WEBHOOK", "x")
+from backend.telegram_monitor.db import Post
+from backend.telegram_monitor.notify import _build_payload
+import json
+print(json.dumps(_build_payload(Post(123, "Gooaye", "hello", "2026-06-11T01:00:00+00:00", "https://t.me/Gooaye/123")), ensure_ascii=False, indent=2))
+PY
+```
 
 ## Layout
 
@@ -164,7 +187,7 @@ backend/telegram_monitor/
   db.py              # SQLite schema + helpers, Post dataclass
   crawler.py         # fetch (retry/backoff) + parse (StructureError)
   monitor.py         # process_new_posts(), backfill()
-  notify.py          # pluggable LINE hook (no-op placeholder)
+  notify.py          # Discord webhook push (notify hook)
   requirements.txt
   test_telegram_monitor.py
   README.md
